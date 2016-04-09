@@ -7,7 +7,6 @@ echo "install bac_a_sable server"
 loadkeys fr-pc
 
 # disable beep
-#rmmod pcspkr
 if lsmod | grep "pcspkr" &> /dev/null ; then
   echo "pcspkr is loaded. Remove it"
   rmmod pcspkr
@@ -19,10 +18,10 @@ fi
 timedatectl set-ntp true
 
 # format sda
-#dd if=/dev/zero of=/dev/sda bs=512 count=1
+dd if=/dev/zero of=/dev/sda bs=512 count=1
 
 # make part with fdisk
-# TODO
+sfdisk /dev/sda < sda.layout
 
 # format filesystem
 # mkfs.ext4 /dev/sda1
