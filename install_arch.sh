@@ -54,14 +54,18 @@ echo "blacklist pcspkr" > /mnt/etc/modprobe.d/nobeep.conf
 # hostname
 echo "bacasable" > /mnt/etc/hostname
 
-# enable some service
-arch-chroot /mnt systemctl enable dhcpcd.service
-
 # grub
 arch-chroot /mnt pacman -S --noconfirm grub
 arch-chroot /mnt grub-install /dev/sda
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
+# add custom package
+arch-chroot /mnt pacman -S --noconfirm glances vim openssh docker
+
+# enable some service
+arch-chroot /mnt systemctl enable dhcpcd.service
+arch-chroot /mnt systemctl enable sshd.service
+arch-chroot /mnt systemctl enable docker.service
 
 umount -R /mnt
 reboot
