@@ -48,20 +48,22 @@ echo "KEYMAP=fr-pc" > /mnt/etc/vconsole.conf
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
 arch-chroot /mnt hwclock --systohc --utc
 
+# blacklist beep
+echo "blacklist pcspkr" > /mnt/etc/modprobe.d/nobeep.conf
+
 # hostname
 echo "bacasable" > /mnt/etc/hostname
 
+# enable some service
 arch-chroot /mnt systemctl enable dhcpcd.service
 
+# grub
 arch-chroot /mnt pacman -S --noconfirm grub
-
 arch-chroot /mnt grub-install /dev/sda
-
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 
 umount -R /mnt
-
-echo "finish install of bacasable, please remove the usb key and reboot"
+reboot
 
 exit 0
