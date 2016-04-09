@@ -24,7 +24,7 @@ dd if=/dev/zero of=/dev/sda bs=512 count=1
 sfdisk /dev/sda < sda.layout
 
 # format filesystem
-mkfs.ext4 /dev/sda1
+mkfs.ext4 -F /dev/sda1
 
 # mount all the new part to /mnt
 mount /dev/sda1 /mnt
