@@ -35,7 +35,7 @@ function config_and_mount_disk {
     dd if=/dev/zero of=/dev/sda bs=512 count=1
 
     # make part with fdisk
-    sfdisk /dev/sda < sda.layout
+    sfdisk /dev/sda < ${SCRIPT_DIR}/sda.layout
 
     # format filesystem
     mkfs.ext4 -F /dev/sda1

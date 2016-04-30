@@ -7,5 +7,3 @@ curl -o /tmp/sda.layout https://raw.githubusercontent.com/ylorenza/bacasable/mas
 chmod +x /tmp/install_arch.sh
 
 /bin/bash /tmp/install_arch.sh
-
-
