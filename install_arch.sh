@@ -39,9 +39,13 @@ function config_and_mount_disk {
 
     # format filesystem
     mkfs.ext4 -F /dev/sda1
+    mkswap -f /dev/sda2
+    mkfs.ext4 -F /dev/sda3
 
     # mount all the new part to /mnt
-    mount /dev/sda1 /mnt
+    mount /dev/sda1 /mnt && mkdir /mnt/home
+    mount /dev/sda3 /mnt/home
+    swapon /dev/sda2
 }
 
 
@@ -76,7 +80,7 @@ function install_base_arch {
 }
 
 
-function finish_install{
+function finish_install {
     umount -R /mnt
     reboot
 }
