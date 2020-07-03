@@ -51,7 +51,7 @@ function config_and_mount_disk {
 
     # crypt the partition for lvm and mount it
     cryptsetup luksFormat ${DISK_PART_LVM} --batch-mode < ${SCRIPT_DIR}/luks_passwd
-    cryptsetup open ${DISK_PART_LVM} < ${SCRIPT_DIR}/luks_passwd
+    cryptsetup open ${DISK_PART_LVM} cryptlvm < ${SCRIPT_DIR}/luks_passwd
 
     # Lvm part
     pvcreate ${LVM_MAPPER}
