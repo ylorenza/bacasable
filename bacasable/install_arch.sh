@@ -16,6 +16,14 @@ function config_install_iso {
     # load fr keyboards
     loadkeys fr-pc
 
+        # disable beep
+    if lsmod | grep "pcspkr" &> /dev/null ; then
+      echo "pcspkr is loaded. Remove it"
+      rmmod pcspkr
+    else
+      echo "pcspkr is not loaded!"
+    fi
+
     # Update clock
     timedatectl set-ntp true
 }
@@ -24,56 +32,27 @@ function config_install_iso {
 function config_and_mount_disk {
 
     # format sda
-    dd if=/dev/zero of=/dev/nvme0n1 bs=512 count=1
+    dd if=/dev/zero of=/dev/sda bs=512 count=1
 
     # make part with fdisk
-    sfdisk /dev/nvme0n1 < ${SCRIPT_DIR}/nvme0n1.layout
+    sfdisk /dev/sda < ${SCRIPT_DIR}/sda.layout
 
-    # should fail silently if first time launching the script
-    cryptsetup close /dev/mapper/cryptlvm | true
+    # format filesystem
+    mkfs.ext4 -F /dev/sda1
+    mkswap -f /dev/sda2
+    mkfs.ext4 -F /dev/sda3
 
-    # crypt the partition for lvm and mount it
-    cryptsetup luksFormat /dev/nvme0n1p2 --batch-mode < ${SCRIPT_DIR}/luks_passwd
-    cryptsetup open /dev/nvme0n1p2 cryptlvm < ${SCRIPT_DIR}/luks_passwd
-
-    # Lvm part
-    pvcreate /dev/mapper/cryptlvm
-    vgcreate myVolGroup /dev/mapper/cryptlvm
-
-    lvcreate -L 30G myVolGroup -n root
-    lvcreate -L 20G myVolGroup -n var
-    lvcreate -L 150G myVolGroup -n home
-    lvcreate -L 20G myVolGroup -n swap
-
-    # Format the new partition from lvm
-    mkfs.ext4 /dev/myVolGroup/root
-    mkfs.ext4 /dev/myVolGroup/var
-    mkfs.ext4 /dev/myVolGroup/home
-    mkswap /dev/myVolGroup/swap
-
-    # mount /
-    mount /dev/myVolGroup/root /mnt
-
-    mkdir /mnt/home
-    mkdir /mnt/var
-
-    # Mount /var /home and the swap
-    mount /dev/myVolGroup/var /mnt/var
-    mount /dev/myVolGroup/home /mnt/home
-    swapon /dev/myVolGroup/swap
-
-    # prepare /boot
-    mkfs.fat -F32 /dev/nvme0n1p1
-    mkdir /mnt/boot
-
-    mount /dev/nvme0n1p1 /mnt/boot
+    # mount all the new part to /mnt
+    mount /dev/sda1 /mnt && mkdir /mnt/home
+    mount /dev/sda3 /mnt/home
+    swapon /dev/sda2
 }
 
 
 function install_base_arch {
 
     # install base package
-    pacstrap /mnt base linux linux-firmware lvm2
+    pacstrap /mnt base base-devel
 
     # fstab
     genfstab -U /mnt >> /mnt/etc/fstab
@@ -92,13 +71,7 @@ function install_base_arch {
     arch-chroot /mnt hwclock --systohc --utc
 
     # hostname
-    echo "ylicarbon" > /mnt/etc/hostname
-    echo "127.0.0.1	localhost" >> /mnt/etc/hosts
-    echo "::1		localhost" >> /mnt/etc/hosts
-    echo "127.0.1.1	ylicarbon.localdomain	ylicarbon" >> /mnt/etc/hosts
-
-
-
+    echo "bacasable" > /mnt/etc/hostname
 
     # grub
     arch-chroot /mnt pacman -S --noconfirm grub
@@ -113,12 +86,25 @@ function finish_install {
 }
 
 
+echo "install bac_a_sable server"
+
 config_install_iso
 
 config_and_mount_disk
 
 install_base_arch
 
-#finish_install
+# blacklist beep
+echo "blacklist pcspkr" > /mnt/etc/modprobe.d/nobeep.conf
+
+# add custom package
+arch-chroot /mnt pacman -S --noconfirm glances vim openssh docker
+
+# enable some service
+arch-chroot /mnt systemctl enable dhcpcd.service
+arch-chroot /mnt systemctl enable sshd.service
+arch-chroot /mnt systemctl enable docker.service
+
+finish_install
 
 exit 0
