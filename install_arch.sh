@@ -23,57 +23,74 @@ function config_install_iso {
 
 function config_and_mount_disk {
 
+    DISK_PATH="/dev/nvme0n1"
+    DISK_PART_EFI="/dev/nvme0n1p1"
+    DISK_PART_LVM="/dev/nvme0n1p2"
+
+    LVM_MAPPER="/dev/mapper/cryptlvm"
+
+    VG_NAME="myVolGroup"
+    LV_ROOT_NAME="root"
+    LV_VAR_NAME="var"
+    LV_HOME_NAME="home"
+    LV_SWAP_NAME="swap"
+
+    LV_ROOT_PATH="/dev/${VG_NAME}/${LV_ROOT_NAME}"
+    LV_VAR_PATH="/dev/${VG_NAME}/${LV_VAR_NAME}"
+    LV_HOME_PATH="/dev/${VG_NAME}/${LV_HOME_NAME}"
+    LV_SWAP_PATH="/dev/${VG_NAME}/${LV_SWAP_NAME}"
+
     # format sda
-    dd if=/dev/zero of=/dev/nvme0n1 bs=512 count=1
+    dd if=/dev/zero of=${DISK_PATH} bs=512 count=1
+
+   # should fail silently if first time launching the script
+    #cryptsetup close ${LVM_MAPPER} | true
 
     # make part with fdisk
-    sfdisk /dev/nvme0n1 < ${SCRIPT_DIR}/nvme0n1.layout
-
-    # should fail silently if first time launching the script
-    cryptsetup close /dev/mapper/cryptlvm | true
+    sfdisk ${DISK_PATH} < ${SCRIPT_DIR}/nvme0n1.layout
 
     # crypt the partition for lvm and mount it
-    cryptsetup luksFormat /dev/nvme0n1p2 --batch-mode < ${SCRIPT_DIR}/luks_passwd
-    cryptsetup open /dev/nvme0n1p2 cryptlvm < ${SCRIPT_DIR}/luks_passwd
+    cryptsetup luksFormat ${DISK_PART_LVM} --batch-mode < ${SCRIPT_DIR}/luks_passwd
+    cryptsetup open ${DISK_PART_LVM} < ${SCRIPT_DIR}/luks_passwd
 
     # Lvm part
-    pvcreate /dev/mapper/cryptlvm
-    vgcreate myVolGroup /dev/mapper/cryptlvm
+    pvcreate ${LVM_MAPPER}
+    vgcreate ${VG_NAME} ${LVM_MAPPER}
 
-    lvcreate -L 30G myVolGroup -n root
-    lvcreate -L 20G myVolGroup -n var
-    lvcreate -L 150G myVolGroup -n home
-    lvcreate -L 20G myVolGroup -n swap
+    lvcreate -L 30G ${VG_NAME} -n ${LV_ROOT_NAME}
+    lvcreate -L 20G ${VG_NAME} -n ${LV_VAR_NAME}
+    lvcreate -L 150G ${VG_NAME} -n ${LV_HOME_NAME}
+    lvcreate -L 20G ${VG_NAME} -n ${LV_SWAP_NAME}
 
     # Format the new partition from lvm
-    mkfs.ext4 /dev/myVolGroup/root
-    mkfs.ext4 /dev/myVolGroup/var
-    mkfs.ext4 /dev/myVolGroup/home
-    mkswap /dev/myVolGroup/swap
+    mkfs.ext4 ${LV_ROOT_PATH}
+    mkfs.ext4 ${LV_VAR_PATH}
+    mkfs.ext4 ${LV_HOME_PATH}
+    mkswap ${LV_SWAP_PATH}
 
     # mount /
-    mount /dev/myVolGroup/root /mnt
+    mount ${LV_ROOT_PATH} /mnt
 
     mkdir /mnt/home
     mkdir /mnt/var
 
     # Mount /var /home and the swap
-    mount /dev/myVolGroup/var /mnt/var
-    mount /dev/myVolGroup/home /mnt/home
-    swapon /dev/myVolGroup/swap
+    mount ${LV_VAR_PATH} /mnt/var
+    mount ${LV_HOME_PATH} /mnt/home
+    swapon ${LV_SWAP_PATH}
 
     # prepare /boot
-    mkfs.fat -F32 /dev/nvme0n1p1
+    mkfs.fat -F32 ${DISK_PART_EFI}
     mkdir /mnt/boot
 
-    mount /dev/nvme0n1p1 /mnt/boot
+    mount ${DISK_PART_EFI} /mnt/boot
 }
 
 
 function install_base_arch {
 
     # install base package
-    pacstrap /mnt base linux linux-firmware lvm2
+    pacstrap /mnt base linux linux-firmware lvm2 vim
 
     # fstab
     genfstab -U /mnt >> /mnt/etc/fstab
@@ -97,13 +114,6 @@ function install_base_arch {
     echo "::1		localhost" >> /mnt/etc/hosts
     echo "127.0.1.1	ylicarbon.localdomain	ylicarbon" >> /mnt/etc/hosts
 
-
-
-
-    # grub
-    arch-chroot /mnt pacman -S --noconfirm grub
-    arch-chroot /mnt grub-install /dev/sda
-    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 
@@ -117,7 +127,7 @@ config_install_iso
 
 config_and_mount_disk
 
-install_base_arch
+#install_base_arch
 
 #finish_install
 
